@@ -7,7 +7,8 @@ use byteorder;
 #[cfg(feature = "snappy")]
 use crc;
 use failure::Error;
-use libflate::deflate::{Decoder, Encoder};
+//use libflate::deflate::{Decoder, Encoder};
+use flate2::{read::DeflateDecoder, write::DeflateEncoder, Compression};
 
 use crate::types::{ToAvro, Value};
 use crate::util::DecodeError;
@@ -63,9 +64,9 @@ impl Codec {
         match *self {
             Codec::Null => (),
             Codec::Deflate => {
-                let mut encoder = Encoder::new(Vec::new());
+                let mut encoder = DeflateEncoder::new(Vec::new(), Compression::new(6));
                 encoder.write_all(stream)?;
-                *stream = encoder.finish().into_result()?;
+                *stream = encoder.finish().unwrap();
             }
             #[cfg(feature = "snappy")]
             Codec::Snappy => {
@@ -94,7 +95,7 @@ impl Codec {
                 let mut decoded = Vec::new();
                 {
                     // either the compiler or I is dumb
-                    let mut decoder = Decoder::new(&stream[..]);
+                    let mut decoder = DeflateDecoder::new(&stream[..]);
                     decoder.read_to_end(&mut decoded)?;
                 }
                 *stream = decoded;
