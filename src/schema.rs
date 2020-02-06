@@ -122,7 +122,7 @@ impl Eq for Schema {}
 /// intermediate type should be especially fast, as the number of enum variants is small, which
 /// _should_ compile into a jump-table for the conversion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum SchemaKind {
+pub enum SchemaKind {
     Null,
     Boolean,
     Int,
@@ -340,7 +340,7 @@ pub struct UnionSchema {
 }
 
 impl UnionSchema {
-    pub(crate) fn new(schemas: Vec<Schema>) -> Result<Self, Error> {
+    pub fn new(schemas: Vec<Schema>) -> Result<Self, Error> {
         let mut vindex = HashMap::new();
         for (i, schema) in schemas.iter().enumerate() {
             if let Schema::Union(_) = schema {
@@ -366,6 +366,13 @@ impl UnionSchema {
         &self.schemas
     }
 
+
+    /// Returns a slice to all variants of this schema.
+    pub fn variants_mut(&mut self) -> &mut Vec<Schema> {
+        &mut self.schemas
+    }
+
+
     /// Returns true if the first variant of this `UnionSchema` is `Null`.
     pub fn is_nullable(&self) -> bool {
         !self.schemas.is_empty() && self.schemas[0] == Schema::Null
@@ -379,6 +386,20 @@ impl UnionSchema {
             .get(&kind)
             .cloned()
             .map(|i| (i, &self.schemas[i]))
+    }
+
+    pub fn find_schema_kind(&self, kind: &SchemaKind) -> Option<(usize, &Schema)> {
+        self.variant_index
+            .get(&kind)
+            .cloned()
+            .map(|i| (i, &self.schemas[i]))
+    }
+
+    pub fn find_schema_kind_mut(&mut self, kind: &SchemaKind) -> Option<(usize, &mut Schema)> {
+        self.variant_index
+            .get(&kind)
+            .cloned()
+            .map(move |i| (i, self.schemas.get_mut(i).unwrap()))
     }
 }
 
